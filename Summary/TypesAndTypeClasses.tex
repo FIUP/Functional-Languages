@@ -1,0 +1,269 @@
+\newpage
+\chapter{Types and Type classes}
+\section{Type checking principles}
+Inside Haskell a type of a collection of values. As an example, we can see the type \texttt{Bool} which is the collections that can be seen as 
+
+\begin{lstlisting}
+Bool -> {True, False}
+\end{lstlisting}
+
+Also, the notation \texttt{Bool -> Bool} represents the set of functions that go from a \texttt{Bool} value to another \texttt{Bool} value.
+\linebreak \linebreak
+
+In Haskell type inference is done at compile time, thus, before evaluating. With this method, Haskell can ensure to be \textbf{type safe} in the strong sense that during evaluation \textbf{no type error can occur}. \\
+In general, type checking can be done both statically or during evaluation. We can define the meaning of \textit{type safeness} by saying that if a program is \textbf{type safe} than \textbf{all the type errors are exposed sooner or later}. \\
+An important thing to remember is to not fall in the trap of believing that in a type safe language no error can occur. Type safeness assures that all the type errors are exposed, but type errors can still be done by programmers and other sort of errors can still occur. \\
+An important drawback of Haskell is that the following expression
+
+\begin{lstlisting}[language=haskell]
+if True then 1 else False
+\end{lstlisting}
+
+even if during execution it always goes inside the \texttt{then} branch, is \textbf{not correct} as the \texttt{then} and \texttt{else} branches have different return types. So, if we could execute this code everything would run correctly, but we cannot do this in Haskell as the compilation fails before executing due to a type error.
+
+\section{Types}
+\subsection{Basic types}
+Inside Haskell we have some basic types that represents the foundation of the languages. Those are \texttt{Bool, Char, String, Int, Integer, Float} and \texttt{Double}. \\
+We also have lists types, which represent sequences of values of the same type. For example we can see that 
+
+\begin{lstlisting}[language=haskell]
+[False, True, False] :: [Bool]
+["One", "Two", "Three"] :: [String]
+\end{lstlisting}
+
+An important thing to notice is that a list type does not convey the length of the list itself. We can then have \texttt{[[String]]}, \texttt{[[[String]]]} and so on.
+\linebreak \linebreak
+
+Another useful type is \texttt{Tuple} which represents tuples of elements and convey their arity. 
+
+\begin{lstlisting}[language=haskell]
+(1, 2) :: (Num, Num)
+(True, True, False) :: (Bool, Bool, Bool)
+(True, 1, 'a', "one") :: (Bool, Int, Char, String)
+
+('a', (False, 'b')) :: (Char, (Bool, Char))
+(['a', 'b'], ('a', [True, False])) :: ([Char], (Char, [Bool]))
+\end{lstlisting}
+
+
+\subsection{Functions}
+\subsubsection{Normal functions}
+Inside Haskell functions' types are represented in order of what types they take as input and what type they produce as output. So we have
+
+\begin{lstlisting}[language=haskell]
+not :: Bool -> Bool
+not True = False
+not False = True
+
+add :: (Int, Int) -> Int
+add (x, y) = x + y
+
+zeroto :: Int -> [Int]
+zeroto n = [0..n]
+\end{lstlisting}
+
+Note that functions can be partials and so may not work on all inputs. For example we can take the following code
+
+\begin{lstlisting}
+Prelude> head[]
+***Exception: Prelude.head: empty list
+\end{lstlisting}
+
+The error tells us that \texttt{head} cannot work on empty lists.
+
+\subsubsection{Curried functions}
+Generally, while writing Haskell code, we prefer writing
+
+\begin{lstlisting}[language=haskell]
+add :: (Int, Int) -> Int
+add (x, y) = x + y
+\end{lstlisting}
+
+as 
+
+\begin{lstlisting}[language=haskell]
+add :: Int -> Int -> Int
+add x y = x + y
+\end{lstlisting}
+
+Using this signature we defined a so-called \textbf{curried} function, which takes one parameter at the time. \\
+To be more clear, we can see that
+
+\begin{lstlisting}[language=haskell]
+Int -> Int -> Int -> Int = Int -> (Int -> (Int -> Int))
+\end{lstlisting}
+
+And 
+
+\begin{lstlisting}[language=haskell]
+mult x y z = ((mult x) y) z
+\end{lstlisting}
+
+With this signature we can see that we take one parameter at the time and pass it to the function that is returned by the previous call. \\
+
+\subsubsection{Polymorphic functions}
+Inside Haskell we can define functions that are \textbf{polymorphic}, and so work on all types. An example can be the function
+
+\begin{lstlisting}[language=haskell]
+length :: [a] -> Int
+\end{lstlisting}
+
+which takes a list of any type and returns its length. \\
+Other polymorphic functions are 
+
+\begin{lstlisting}[language=haskell]
+id :: a -> a
+head :: [a] -> a
+take :: Int -> [a] -> [a]
+zip :: [a] -> [b] -> [(a, b)]
+\end{lstlisting}
+
+\subsubsection{Overloaded types}
+As usual inside other languages, \texttt{+}, \texttt{*} and other operators (which are functions inside Haskell) are overloaded inside Haskell too. 
+
+\begin{lstlisting}
+Prelude> :t 1 + 2
+Num a => a
+
+Prelude> :t 1.1 + 2.0
+Fractional a => a
+
+Prelude> :t (+)
+Num a => a -> a -> a
+
+Prelude> :t (*)
+Num a -> a -> a
+\end{lstlisting}
+
+It is important to note that all types with a type constraint such as \texttt{Num => } or similar, which denote a more specif type than a polymorphic type, are \textbf{overloaded} types.
+
+
+\subsection{Type classes}
+Within Haskell we can define \textbf{type classes}, which are collections of types that support some overloaded operations called \textbf{methods}.
+\linebreak \linebreak
+
+Haskell in particular has some built-in type classes. 
+
+\subsubsection{Eq}
+The type class \texttt{Eq} contains all the types whose values can be compared for equality and inequality. Its methods are
+
+\begin{lstlisting}[language=haskell]
+(==) :: a -> a -> Bool
+(\=) :: a -> a -> Bool
+\end{lstlisting}
+
+Examples of types that can be found inside \texttt{Eq} are \texttt{Bool, Char, Int, String and Float}. \\
+
+Also types like \texttt{[a]} and \texttt{(a, b, c)} can be found inside \texttt{Eq} as long as \texttt{a, b} and \texttt{c} are inside \texttt{Eq}. 
+
+
+\subsubsection{Ord}
+The type class \texttt{Ord} contains all the types that are instances of the equality class \texttt{Eq} and, in addition, whose values are totally ordered and therefore possess the following methods
+
+\begin{lstlisting}[language=haskell]
+(<) :: a -> a -> Bool
+(<=) :: a -> a -> Bool
+(>) :: a -> a -> Bool
+(>=) :: a -> a -> Bool
+min :: a -> a -> a
+max :: a -> a -> a
+\end{lstlisting}
+
+All basic types are inside \texttt{Ord}, and lists and tuples are inside \texttt{Ord} too provided that their elements have type that is inside \texttt{Ord}. \\
+Note that lists, strings and tuples are ordered lexicographically. 
+
+
+\subsubsection{Show}
+The type class \texttt{Show} contains all the types whose values can be converted into strings in order to be printed. Its main method is 
+
+\begin{lstlisting}[language=haskell]
+show :: a -> String
+\end{lstlisting}
+
+All basic types derive \texttt{Show}, and so we can write
+
+\begin{lstlisting}
+Prelude> show True
+"True"
+
+Prelude> show 'a'
+"'a'"
+
+Prelude> show 34
+"34"
+\end{lstlisting}
+
+
+\subsubsection{Read}
+The type class \texttt{Read} represents the dual of \texttt{Show} and contains all the types whose values can be converted from a string using the method
+
+\begin{lstlisting}[language=haskell]
+read :: String -> a
+\end{lstlisting}
+
+As usual, most basic types, lists and tuples derive \texttt{Read}, so we can write
+
+\begin{lstlisting}
+Prelude> read "False" :: Bool
+False
+
+Prelude> read "34" :: Int
+34
+
+Prelude> read "[2, 4, 5]" :: [Int]
+[2, 4, 5]
+
+Prelude> read "('a', False)" :: (Char, Bool)
+('a', False)
+\end{lstlisting}
+
+Note that types are mandatory inside these expressions in order to resolve the type of the result which, otherwise, would not be inferrable due to the too few operations. On the other side, the expression 
+
+\begin{lstlisting}[language=haskell]
+Prelude> not(read "False")
+\end{lstlisting}
+
+does not need any type to be inferred as there is already the function \texttt{not} which permits the inferring. 
+
+
+\subsubsection{Num}
+The type class \texttt{Num} contains all the numeric types. That is all the types be processed with the following methods
+
+\begin{lstlisting}[language=haskell]
+(+) :: a -> a -> a
+(-) :: a -> a -> a
+(*) :: a -> a -> a
+negate :: a -> a
+abs :: a -> a
+signum :: a -> a
+\end{lstlisting}
+
+
+\subsubsection{Integral}
+The type class \texttt{Integral} contains all the types that are inside \texttt{Num} and represent integers and support
+
+\begin{lstlisting}[language=haskell]
+div :: a -> a -> a
+mod :: a -> a -> a
+\end{lstlisting}
+
+Note that we should write 
+
+\begin{lstlisting}[language=haskell]
+div 2 3
+\end{lstlisting}
+
+but often we will prefer using the infix notation to write the more comprehensible
+
+\begin{lstlisting}[language=haskell]
+2 `div` 3
+\end{lstlisting}
+
+
+\subsubsection{Fractional}
+The type class \texttt{Fractional} contains all the types that represents floating point values which are also inside \texttt{Num}. Its methods are
+
+\begin{lstlisting}[language=haskell]
+(/) :: a -> a -> a
+recip :: a -> a
+\end{lstlisting}

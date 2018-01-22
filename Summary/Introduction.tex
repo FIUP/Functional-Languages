@@ -1,0 +1,70 @@
+\newpage
+\chapter{Introduction}
+\section{Useful resources}
+During the \textit{Functional Languages} course the main focus is the Haskell programming language. It is uses in order to explore the "joys" of the functional approach when coding a program, to learn about pure and lazy languages, to learn about type inference and how it can be useful when done automatically, and also to see how Haskell is compiled and learn something about run-time management. \\
+The main reference of the entire course is the \textit{Programming in Haskell} book, written by Graham Hutton and published by the Cambridge University Press. Also, another useful book is \textit{Lean you a Haskell for great good} by Miran Lipovaca, which can be found at the \href{http://learnyouahaskell.com/chapters}{"Learn You a Haskell for Great Good!" site}. \\
+Other useful documentation may be found at the \href{http://www.seas.upenn.edu/~cis194}{Course CIS194 site by the University of Pennsylvania} and inside the \textit{Real World Haskell} book by Bryan O'Sullivan, Don Stewart and John Goerzen, which can be found at its \href{http://book.realworldhaskell.org/read/}{official site}.
+
+\section{Historical context}
+During the years 1930, the main problem of computer science was to define with precision what computable functions were. In order to do this, there were two main approaches. 
+
+\begin{itemize}
+	\item The \textbf{Turing} approach, which defined the model of what is now called a \textit{computer} with a mutable memory
+	\item The \textbf{Church and Curry} approach, which created the rules used to define and compose functions inside which all is immutable. This particular approach was called \textit{lambda calculus}
+\end{itemize}
+
+Later on it was demonstrated that both approaches define the same set of functions that are therefore the so called \textbf{computable functions}.
+\linebreak \linebreak
+
+From both approaches may programming languages were then created. Same examples may be \textit{FORTRAN, Pascal, C, C++, Java} from the Turing approach, and \textit{LISP, ISWIM, Miranda, Haskell} from the Church and Curry approach. \\
+During recent years some programming languages were also created in order to use both languages paradigms. Some examples may be \textit{Scala, Ruby} and \textit{Occaml}. \\
+
+\section{A taste of Haskell}
+As seen before, Haskell is a functional language which strictly adheres to the Church and Curry definition. Inside it all variables are functions, and everything is immutable. \\
+Let's get a taste of it by simply looking at some basic functions that can be defined.
+
+\begin{lstlisting}[language=haskell]
+--| Contents of sum.hs
+--| Sums a list of numbers
+sum[ ] = 0 
+sum(n:ns) = n + sum ns
+\end{lstlisting}
+
+If we then type the command 
+
+\begin{lstlisting}
+>> ghci sum.hs
+Prelude> sum[1, 2, 3]
+\end{lstlisting}
+
+we get the correct result, \texttt{6}. \\
+
+We can also check the type of \texttt{sum} by using 
+
+\begin{lstlisting}
+>> ghci sum.hs
+Prelude> :t sum
+\end{lstlisting}
+
+which should return \texttt{Num a => [a] -> a}. \\
+This signature tells us that \texttt{sum} works only with types that are contained inside the type class \texttt{Num} (briefly, they are numbers), takes one input which is a list of \texttt{Num} (the \texttt{[a]} signature) and returns a single value of type \texttt{Num} (\texttt{a}). \\
+The main point to observe here is that Haskell supports many types of numbers integers and floating point, and groups all of them inside the class \texttt{Num} which can then be used to define more generic functions. \\
+It's also interesting to see that the type of the functions \texttt{sum} if inferred by the compiler just looking at the type of \texttt{0} and \texttt{+}.
+\linebreak \linebreak
+
+Even with this small example we can see that functional languages are pure, and so don't have storable and/or mutable variables. They only have names that hold a constant value and instead of changing the values of variables new values are computed. Also, functions do not produce side effects whatsoever. \\
+The main advantages of this approach is that we can get a higher level of abstraction and simplicity, we can be more correct and have easier parallel implementation of our programs. The disadvantages, however, are a difficult relation with the I/O actions and a difficult way to handle exceptions. 
+
+\section{The Glasgow Haskell Compiler}
+Following the sire \href{https://haskell.org}{Haskell.org} you can find the \texttt{Glasgow Haskell Compiler} (shortly called \texttt{GHC}) which contains all the stuff used in order to compile and/or interpret a program written using Haskell. \\
+Once installed the command seen above, \texttt{ghci}, runs the interpreter and takes you inside \texttt{Prelude}, an environment where you can type expressions that are immediately executed. \\
+It's helpful to know that \texttt{Prelude} is in reality a library and contains a lot of built-in functions that can be useful when coding really long programs. Some functions are
+
+\begin{itemize}
+	\item \texttt{head} which takes the first element of a list
+	\item \texttt{tail} which takes all the elements of a list starting from the 2nd to the last one
+	\item \texttt{take n} which takes the first \texttt{n} elements of a list
+	\item \texttt{drop n} which deletes the first \texttt{n} elements from a list
+	\item \texttt{length} which returns the size of a list
+	\item \texttt{sum} which sums all the elements inside a list
+\end{itemize}

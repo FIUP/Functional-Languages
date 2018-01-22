@@ -1,0 +1,135 @@
+\newpage
+\chapter{List comprehension, recursive functions and higher order functions}
+
+\section{List comprehension}
+\textbf{List comprehension} is a simple way provided by Haskell to create list using a generator.\\
+Let's see an example
+
+\begin{lstlisting}[language=haskell]
+Prelude> [ x^2 | x <- [1..5] ]
+[1, 4, 9, 16, 25
+\end{lstlisting}
+
+The generator used is \texttt{x <- [1..5]} which creates a list containing the values from 1 (inclusive) to 5 (inclusive). The list comprehension than acts as a loop, iterating over all the elements and applying the function which is written on the left side of \texttt{|}, obtaining the final list.
+\linebreak \linebreak
+
+Note that when there are multiple generators they acts as nested loops, with the first one written acting as the enclosing loop and the second one as the nested loop.
+
+\begin{lstlisting}[language=haskell]
+Prelude> [ (x, y) | x <- [1, 2, 3], y <- [4, 5] ]
+[(1, 4), (1, 5), (2, 4), (2, 5), (3, 4), (3, 5) ]
+
+Prelude> [ (x, y) | y <- [4, 5], x <- [1, 2, 3] ]
+[(1, 4), (2, 4), (3, 4), (1, 5), (2, 5), (3, 5)]
+\end{lstlisting}
+
+It is also possible to use a first generator to determine the values that a second generator should generate.
+
+\begin{lstlisting}[language=haskell]
+Prelude> [ (x, y) | x <- [1..3], y <- [x..3] ]
+[(1, 1), (1, 2), (1, 3), (2, 2), (2, 3), (3, 3)]
+\end{lstlisting}
+
+Also, list comprehension can use guards in order to determine if a value should be put inside the list that is being generated or not.
+
+\begin{lstlisting}[language=haskell]
+-- | Gets all the factors of a given number
+factors :: Int -> [Int]
+factors n = [x | x <- [1..n], n `mod` x == 0]
+
+-- | Tells if a number is a prime number or not 
+prime :: Int -> Bool
+prime n = factors n == [1, n]
+
+-- | Generates the first n prime numbers
+primes :: Int -> [Int]
+primes n = [x | x <- [2..n], prime x]
+\end{lstlisting}
+
+
+\section{Recursive functions}
+Recursive functions are one of the most powerful tools that Haskell provides, but they can cause a lot of trouble during the development too. In order to define a simple and well typed function easily, here are some advices.
+
+\begin{enumerate}
+	\item Define the type of the function
+	\item Enumerate the cases
+	\item Define the simpler cases
+	\item Define the remaining cases
+	\item Generalize and simplify 
+\end{enumerate}
+
+Let's see how we can apply these steps while writing \texttt{drop}, a function which takes a list as an input and drops the first \texttt{n} elements returning the remaining ones. 
+
+\begin{enumerate}
+	\item Define the type\\
+		  \texttt{drop :: Int -> [a] -> [a]}
+	
+	\item Enumerate the cases \\
+		  \texttt{drop 0 [] = } \\
+		  \texttt{drop 0 (x:xs) = } \\
+		  \texttt{drop n [] =}  \\
+		  \texttt{drop n (x:xs) = }
+		  
+	\item Define the simple cases \\
+		  \texttt{drop 0 [] = []} \\
+		  \texttt{drop 0 (x:xs) = (x:xs)} \\
+		  \texttt{drop n [] = []}
+		  
+	\item Define the remaining cases \\
+		  \texttt{drop n (x:xs) = drop (n-1) xs}
+		  
+	\item Simplify and generalize \\
+		  \texttt{drop :: Integral b => b -> [a] -> [a]} \\
+		  \texttt{drop 0 xs = xs} \\
+		  \texttt{drop \_ [] = []} \\
+		  \texttt{drop n (\_:xs) = drop (n-1) xs}
+	
+\end{enumerate}
+
+
+\section{Higher order functions}
+\textbf{Higher order functions} are functions that return functions as a result. This looks obvious when referring to currying, but with higher order functions we can define also functions that take functions as parameters. 
+
+\begin{lstlisting}[language=haskell]
+twice :: (a -> a) -> a -> a
+twice f = f . f
+
+Prelude> twice (*2) 3
+12
+
+Prelude> twice reverse [1, 2, 3]
+[1, 2, 3]
+\end{lstlisting}
+
+Higher order functions are useful when defining maps, functions that take as input a function and a list to which elements apply the function. 
+
+\begin{lstlisting}[language=haskell]
+map :: (a -> b) -> [a] -> [b]
+map f xs = [ fx | x <- xs ]
+
+Prelude> map (+1) [1, 2, 3]
+[2, 3, 4]
+
+Prelude> map reverse ["abc", "def"] 
+["cba", "fed"]
+\end{lstlisting}
+
+Using nested maps it is also possible to work on nested lists
+
+\begin{lstlisting}[language=haskell]
+Prelude> map (map (+1)) [[1, 2, 3], [4, 5]]
+= {applying outer map}
+[map (+1) [1, 2, 3], map (+1) [4, 5]]
+= {applying inner maps} 
+[[2, 3, 4], [5, 6]]
+\end{lstlisting}
+
+Also, with higher order functions it is possible to define filters.
+
+\begin{lstlisting}[language=haskell]
+filter :: (a -> Bool) -> [a] -> [a]
+filter p xs = [x | x <- xs, p x]
+
+Prelude> filter even [1..10]
+[2, 4, 6, 8, 10]
+\end{lstlisting}

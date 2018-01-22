@@ -1,0 +1,107 @@
+\newpage
+\chapter{Functors}
+\section{Introduction}
+So far we've encountered a lot of the type classes that are present inside Prelude. We've seem how \texttt{Eq} represents the types that can be equated and \texttt{Ord} the ones that can be ordered. We've used \texttt{Show} to classify the types that can be displayed and \texttt{Read} the ones that can be read. \\
+An now, we are talking about the \textbf{\texttt{Functor}} type class, which is basically for things that can be mapped over. \\
+The first reaction when listening to the keyword "map" is probably thinking about lists, and that is perfect because the list type of part of the \texttt{Functor} class.
+\linebreak \linebreak
+
+Let's see now how \texttt{Functor} is implemented.
+
+\begin{lstlisting}[language=haskell]
+class Functor f where
+  fmap :: (a -> b) -> f a -> f b
+\end{lstlisting}
+
+We see that it defines one function, \texttt{fmap}, and doesn't provide any default implementation for it. We see that \texttt{fmap} takes a function from one type to another and a functor applied with one type, and returns a functor applied with another type. \\
+
+
+\section{Examples}
+\subsection{Lists}
+In order to make things more clear, let's take a step back and see a similar type, the one of \texttt{map}.
+
+\begin{lstlisting}[language=haskell]
+map :: (a -> b) -> [a] -> [b]
+\end{lstlisting}
+
+Interesting! It takes a function from one type to another and a list of one type, and returns a list of another type. This is a perfect example of \texttt{Functor}. In fact, \texttt{map} is just a \texttt{fmap} that works only on lists and is defined as follows.
+
+\begin{lstlisting}[language=haskell]
+instance Functor [] where
+  fmap = map
+\end{lstlisting}
+
+Notice that there is no need to write \texttt{instnace Functor [a] where}, because from \texttt{fmap :: (a -> b) -> f a -> f b} we see that \texttt{f} has to be a type constructor that takes one type. \texttt{[a]} is already a concrete type (of a list with any type inside it), while \texttt{[]} is a type constructor that takes one type and can produce types such as \texttt{[Int], [String]} or even \texttt{[[String]]}.
+\linebreak \linebreak
+
+Since for lists \texttt{fmap} is just \texttt{map}, we get the same results when using them on lists. 
+
+\begin{lstlisting}[language=haskell]
+Prelude> fmap (*2) [1..3]
+[2, 4, 6]
+
+Prelude> map (*2) [1..3]
+[2, 4, 6]
+\end{lstlisting}
+
+
+\subsection{Maybe}
+Similar to \texttt{[]}, also \texttt{Maybe} is a \texttt{Functor}.
+
+\begin{lstlisting}[language=haskell]
+instance Functor Maybe where
+  fmap f (Just x) = Just(f x)
+  fmap f Nothing = Nothing 
+\end{lstlisting}
+
+
+\subsection{Tree}
+Another type that can be mapped over is \texttt{Tree a}.
+
+\begin{lstlisting}[language=haskell]
+instance Functor Tree where
+  fmap f (Leaf a) = Leaf(f a)
+  fmap f (Node left x right) = Node (fmap f left) (fmap x) (Node fmap f right)
+\end{lstlisting}
+
+
+\section{Wrapping up}
+In a more general way, a \texttt{Functor T a} is a container that contains values of type \texttt{a} and \texttt{fmap f} applies \texttt{f} to each value inside the container. \\
+We can see that \texttt{IO} is an instance of \texttt{Functor} too.
+
+\begin{lstlisting}[language=haskell]
+instance Functor IO where
+  fmap f mx = do x <- mx
+                 return (g x)
+\end{lstlisting}
+
+The usage of \texttt{fmap} is that it can process the values of any container that is a \texttt{Functor}, and this generalization propagates to functions defined by the mean of \texttt{fmap} itself. 
+
+\begin{lstlisting}[language=haskell]
+inc = fmap (+1)
+
+Prelude> inc (Just 1)
+Just 2
+
+Prelude> inc [1, 2, 3]
+[2, 3, 4]
+
+Prelude> inc (Node (Leaf 1) 0 (Leaf 2))
+Node (Leaf 2) 1 (Leaf 3) 
+\end{lstlisting}
+
+\section{Functor laws}
+In order to define a well behaved \texttt{Functor} we need to make it respect some laws. 
+
+\begin{enumerate}
+	\item \texttt{fmap id = id} \\
+		  That is, \texttt{fmap} needs to preserve the identify.
+		  
+	\item \texttt{fmap (f . g) = fmap g . fmap h} \\
+		   That is, \texttt{fmap} needs to preserve the function composition.
+\end{enumerate}
+
+These rules, together with the type of \texttt{fmap}, assure that \texttt{fmap} is a mapper that does not reorder the values inside the container which is applied to.
+
+\section{Interesting fact}
+For any parameterized type inside Haskell there is \texttt{at most one} function \texttt{fmap} that satisfies the laws. So, if we can make a parameterized type into a \texttt{Functor}, then \texttt{fmap} is unique.

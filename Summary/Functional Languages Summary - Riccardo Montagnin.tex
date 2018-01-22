@@ -1,0 +1,51 @@
+\documentclass[11pt,a4paper,oneside]{book}
+\usepackage[utf8]{inputenc}
+\usepackage[document]{ragged2e}
+\usepackage{fullpage}
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage[margin = 0.5in]{geometry}
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks = true, 
+	linkcolor = black,
+	urlcolor = blue
+}
+\usepackage{listings}
+\usepackage[T1]{fontenc}
+\usepackage{ragged2e}
+
+
+\begin{document}
+\raggedright
+
+
+\title{Functional Languages Recap}
+\author{Riccardo Montagnin}
+\date{Academic Year 2017/18}
+\maketitle
+
+\newpage
+
+\chapter*{Abstract}
+This document represents a small recap of all the things that have been taught during the Functional Languages course by Professor Filè. \\
+All the written things may contain some errors, so please do not trust every single bit of information coming from them but feel free to do your own search if something may look fishy. Also, if you find any error please contact me or feel free to correct it inside this file too. \\
+In order to write this recap, I looked first into the prof. Filè's lessons slides, and then added some missing information coming from the course book, \textit{Programming in Haskell - Graham Hutton (2nd edition)}, and the \href{http://learnyouahaskell.com/}{"Learn You a Haskell for Great Good!" site}.
+
+\tableofcontents
+
+\input{Configuration.tex}
+\input{Introduction.tex}
+\input{TypesAndTypeClasses.tex}
+\input{DefiningFunctions.tex}
+\input{ListComprehensionRecursiveFunctionsHigherOrderFunctions.tex}
+\input{DeclaringTypesAndClasses.tex}
+\input{InteractiveProgrammingIO.tex}
+\input{Functors.tex}
+\input{Applicatives.tex}
+\input{Monads.tex}
+\input{LazyEvaluation.tex}
+	
+
+\end{document}

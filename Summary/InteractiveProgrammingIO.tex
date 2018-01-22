@@ -1,0 +1,97 @@
+\newpage
+\chapter{Interactive programming and I/O}
+\section{Introduction to I/O in Haskell}
+So far we've seen only batch programs in Haskell. Inside them the input is given together with the program that executes in order to print the result. \\
+Most of the programs, however, are interactive and ask for input in order to return an output possibly several times during the execution. Since Haskell is functional we want to see I/O actions as functions too, in particular of type \texttt{IO}.
+
+\begin{lstlisting}[language=haskell]
+type IO = World -> World
+\end{lstlisting}
+
+This type means that every I/O action will take as input the current state of the execution (called \texttt{World}) and return a new state. \\
+A part from the change of the state of the execution, I/O actions may however return a value too. So we can change the definition and write the following.
+
+\begin{lstlisting}[language=haskell]
+type IO a = World -> (a, World) 
+\end{lstlisting}
+
+By this definition, we identify \texttt{IO Char} which returns a \texttt{Char} and \texttt{IO ()} which performs pure side effects. \\
+In order to describe an input we can then use currying to define \texttt{Char -> IO ()}, which takes a \texttt{Char} and performs side effects.
+\linebreak \linebreak
+
+Now that we have defined an IO action in terms of functions, it is natural to ask ourselves: "What is \texttt{World}?". \\
+The reality is that we don't (or, better, do not want to) know what is. It is sufficient for us to know that in reality \texttt{IO} is a built-in type whose details are hidden. 
+
+
+\section{Basic I/O actions}
+Some basic I/O actions that can be composed in order to create more sophisticated interactive programs are the followings.
+
+\begin{lstlisting}[language=haskell]
+getChar :: IO Char
+putChar :: Char -> IO ()
+return :: a -> IO a
+\end{lstlisting}
+
+These actions are all built in into the GHC system, and their implementations won't be object of this course. \\
+Note, however, that \texttt{return} transforms any expression into an IO action that delivers that expression.
+\linebreak \linebreak
+
+As the type \texttt{IO a} is a monad, we can use a special notation to compose I/O actions.
+
+\begin{lstlisting}[language=haskell]
+do v1 <- a1
+   v2 <- a2
+      ...
+   vn <- an
+   return (f v1 v2 ... vn)
+\end{lstlisting}
+
+Where each \texttt{v <- a} is a generator. \\
+We can also use \texttt{a} alone without \texttt{v <-} if we don't care about \texttt{v} itself.
+\linebreak \linebreak
+
+To make the things more clear, let's see an action that reads three characters and returns the first and third ones. 
+
+\begin{lstlisting}[language=haskell]
+act :: IO (Char, Char)
+act = do x <- getChar
+         getChar
+         y <- getChar
+         return (x, y)
+      
+\end{lstlisting}
+
+Note that omitting \texttt{return} would result in a type error.
+
+\section{Derived primitives}
+Let's see how we can write useful functions using the ones already present inside Prelude.
+
+\begin{lstlisting}[language=haskell]
+-- | Gets a line as a string
+getLine :: IO String
+getLine = do x <- getChar
+             if x == '\n' then return []
+             else do xs <- getLine
+                  return (x:xs)
+                  
+-- | Prints a string
+putString :: String -> IO()
+putString (x:xs) = do putChar x 
+                      putString xs
+                      
+-- | Prints a string as a line
+putStringLine :: String -> IO ()
+putStringLine = do putString xs
+                   putChar '\n'
+\end{lstlisting}
+
+Let's see now an I/O action which prompts for a string and then displays its length.
+
+\begin{lstlisting}[language=Haskell]
+stringLen :: IO()
+stringLen = do putString "Enter a string:"
+               xs <- getLine
+               putString "The string has "
+               putString (show (length xs))
+               putString " characters"
+\end{lstlisting}

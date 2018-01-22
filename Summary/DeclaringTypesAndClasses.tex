@@ -1,0 +1,170 @@
+\newpage
+\chapter{Declaring new types and classes}
+\section{Declaring new types}
+Inside Haskell there are three ways to define a new type.
+
+\begin{enumerate}
+	\item \texttt{type}: used when we want to define a so-called \textbf{transparent} type, which is a new name for an already existing type
+	\item \texttt{data}, used to define an opaque user defined type
+	\item \texttt{newtype}, used to define especially simple opaque types that allows a more efficient implementation 
+\end{enumerate}
+
+\subsection{Type}
+The simplest way to create a new type is to define another name of an already existing type. This is done using the \texttt{type} keyword.
+
+\begin{lstlisting}[language=haskell]
+type String = [Char] 
+type Pos = (Int, Int)
+type Transer = Pos -> Pos
+\end{lstlisting}
+
+Note that when using \texttt{type} we cannot define a recursive tree, and so the current definition is \textbf{not allowed}.
+
+\begin{lstlisting}[language=haskell]
+type Tree = (Int, [Tree])
+\end{lstlisting}
+
+\subsection{Data}
+The \texttt{data} keyword is used to define whole new types by the meanings of their constructor. \\
+
+Inside Prelude we can find the following definition
+
+\begin{lstlisting}[language=haskell]
+data Bool = False | True
+\end{lstlisting}
+
+where \texttt{False} and \texttt{True} are two constructors for values of type \texttt{Bool}. \\
+Note that the order by which the constructors are defined determines the order of the values themselves. So, in this case, the assertion \texttt{False < True} would be correct.
+\linebreak \linebreak
+
+An example of a new type definition could be the following
+
+\begin{lstlisting}[language=haskell]
+data Shape = Circle Float | Rect Float Float
+\end{lstlisting}
+
+were we define \texttt{Shape} values to be built either by using the single value constructor \texttt{Circle} (which asks for a radius value) or the double value constructor \texttt{Rect} (which asks for an height and length values). \\
+Note that the type of \texttt{Rect} and \texttt{Circle} represents a value, and when we apply the correct values either to \texttt{Rect} or \texttt{Circle} we get the application itself.
+
+\begin{lstlisting}[language=haskell]
+Prelude> :t Rect
+Rect :: Float -> Float -> Shape
+
+Prelude> Rect 2.3 1.4
+Rect 2.3 1.4
+\end{lstlisting}
+
+Once we have defined a new type, we can define also functions to work with values of that type, or utility functions to create new values of that type.
+
+\begin{lstlisting}[language=haskell]
+square :: Float -> Shape
+square x = Rect x x
+
+area :: Shape -> Float
+area (Circle r) = pi * r^2
+area (Rect x y) = x * y
+\end{lstlisting}
+
+Inside Prelude there is a special type, \texttt{Maybe}, which is used in order to represent a success or a failure behavior during functions executions.
+
+\begin{lstlisting}[language=haskell]
+data Maybe a = Nothing | Just a
+\end{lstlisting}
+
+In this case the empty constructor \texttt{Nothing} means that there was a failure, while \texttt{Just a} represents a success with value \texttt{a}. 
+
+
+\subsection{Newtype}
+When a type definition involves a single constructor with only one parameter, then it is possible to define it using \texttt{newtype} to let the compiler implement it in a more efficient way. 
+
+\begin{lstlisting}[language=haskell]
+newtype Nat = N Int
+\end{lstlisting}
+
+
+\subsection{Recursive types}
+Types defined using \texttt{data} and \texttt{newtype} can be recursive, while the ones defined using \texttt{type} cannot.
+
+\begin{lstlisting}[language=haskell]
+data Nat = Zero | Succ Nat
+
+nat2int :: Nat -> Int
+nat2Int Zero = 0
+nat2int (Succ n) = 1 + nat2int n
+
+int2nat :: Int -> Nat
+int2nat 0 = Zero
+int2nat n = Succ(int2nat (n-1))
+
+add :: Nat -> Nat -> Nat
+add m n = int2nat(nat2int n + nat2int m)
+\end{lstlisting}
+
+In order to define a binary tree type, when must use \texttt{data} because we need to provide a constructor either for the leafs and the nodes of the tree.
+
+\begin{lstlisting}[language=haskell]
+data Tree a = Leaf a | Node (Tree a) (Tree a)
+
+flatten :: Tree a -> [a]
+flatten (Leaf a) = [a]
+flatten (Node left x right) = flatten left ++ [x] ++ flatten right
+\end{lstlisting}
+
+
+\section{Declaring new classes}
+\subsection{Creating a new class}
+Inside Haskell we can define a new class using the class mechanism. 
+
+\begin{lstlisting}[language=haskell]
+class Eq a where
+  (==), (/=) :: a -> a -> Bool
+  x /= y = not (x == y)
+\end{lstlisting}
+
+Using this definition we are requiring any type that wants to be inside \texttt{Eq} to support the methods \texttt{==} and \texttt{/=}, but it is necessary to only define \texttt{==} as \texttt{/=} is defined using \texttt{==} itself. \\
+
+\begin{lstlisting}[language=haskell]
+instance Eq Bool where
+  False == False = True
+  True == True = True
+  _ == _ = False
+\end{lstlisting}
+
+It is important to know that only types define using \texttt{data} and \texttt{newtype} can be made into instances of classes, as an user cannot modify an already existing type using \texttt{type}. \\
+Also, as it is inside other programming languages, default method definitions (such as \texttt{/=} inside \texttt{Eq}) can be overridden inside instances.
+
+
+\subsection{Extending a class}
+Apart from creating a new class, inside Haskell we can extend already existing classes in order to define new ones. 
+
+\begin{lstlisting}[language=haskell]
+class Eq a => Ord a where
+  (<), (<=), (>), (>=) :: a -> a -> Bool
+  min, max :: a -> a -> a
+  
+  min x y | x <= y = x
+  		  | otherwise = y
+  		  
+  max x y | x <= y = y
+  		  | otherwise = x
+\end{lstlisting}
+
+Using this definition by extension, if a type is inside \texttt{Eq} and wants to be also \texttt{Ord}, it will have to implement four methods (\texttt{<, <=, >, >=}) and will get two methods for free due to their default implementation (\texttt{min} and \texttt{max}). 
+
+\begin{lstlisting}[language=haskell]
+instance Ord Bool where
+  False < True = True
+  _ < _ = False
+  b <= c = (b < c) || (b == c)
+  b > c = c < b
+  b >= c = c <= b
+\end{lstlisting}
+
+If we want to create a new type and make it part of a class, than all we have to do is use the \texttt{deriving} keyword. 
+
+\begin{lstlisting}[language=haskell]
+data Bool = False | True
+		    deriving (Eq, Ord, Show, Read)
+\end{lstlisting}
+
+Note that, as seen before, the order \texttt{False < True} is determined by the constructors declaration order.

@@ -1,0 +1,137 @@
+\newpage
+\chapter{Defining functions}
+Inside Haskell there are a lot of ways to define new functions. Let's analyze and see how we can use each one of them, starting from the easiest one. 
+
+\section{Composition}
+The first way to define a function in Haskell is by using the composition of older functions. For example we can define a function that tells if a number is even or not by using the \texttt{mod} function present inside prelude
+
+\begin{lstlisting}[language=haskell]
+even :: Integral a => a -> Bool
+even n = n `mod` 2 ==0
+\end{lstlisting}
+
+Or we can also use \texttt{take} and \texttt{drop} to create a function that splits a list at the n-th value
+
+\begin{lstlisting}[language=haskell]
+splitAt :: Int -> [a] -> ([a], [a])
+splitAt n xs = (take n xs, drop n xs)
+\end{lstlisting}
+
+This method is very easy and quick in order to define helper functions, but cannot lead to building very complex functions. 
+
+\section{Conditional}
+\subsection{Classic conditional}
+The second method used to create functions inside Haskell if by using conditionals. \\
+Using this method we can create functions that behave differently based on the input that is given to them.
+
+\begin{lstlisting}[language=haskell]
+abs :: Int -> Int
+abs n = if n >= 0 then n else -n
+
+signum :: Int -> Int
+signum n = if n < 0 then -1 else 
+			if n == 0 then 0 else 1
+\end{lstlisting}
+
+Note that when using the \texttt{if C then T else E} expression, we must ensure that the types of \texttt{T} and \texttt{E} are the same, in order to avoid type errors. This also means that we \textbf{cannot have a dangling else branch}. 
+
+\subsection{Guarded equations}
+Another way to define functions based on their input is by using \textbf{guarded equations}, which are very similar to classic conditionals.
+
+\begin{lstlisting}[language=haskell]
+abs :: Int -> Int
+abs n | n >= 0 = n
+	  | otherwise = -n
+	  
+signum :: Int -> Int
+signum n | n < 0 = -1
+		 | n == 0 = 0
+		 | otherwise = 1
+\end{lstlisting}
+
+We can clearly see that this method makes the functions easier to read when there are more than two choices from which to select. 
+
+
+\section{Pattern matching}
+The most common way to define a function in Haskell is by using \textbf{pattern matching} which consists in defining a function by the mean of what values its parameters can assume. 
+
+\begin{lstlisting}[language=haskell]
+not :: Bool -> Bool
+not False = True
+not True = False
+
+(&&) :: Bool -> Bool -> Bool
+True && True = True
+True && False = False
+False && False = False
+False && False = False
+\end{lstlisting}
+
+Please note that the patterns defined are evaluated in the same order that they are written, from the top to the bottom. The first pattern that is satisfied determines the output of the function.
+\linebreak \linebreak
+
+If we look at the definition of \texttt{\&\&} given above, we can see that it can be simplified writing
+
+\begin{lstlisting}[language=haskell]
+(&&) :: Bool -> Bool -> Bool
+True && b = b
+False && _ = False
+\end{lstlisting}
+
+or 
+
+\begin{lstlisting}[language=haskell]
+(&&) :: Bool -> Bool -> Bool
+True && True = True
+_ && _ = False
+\end{lstlisting}
+
+We use the special symbol \texttt{\_} to denote parameters that we won't use and can assume any value. Using this the compiler will perform some optimization in order to run the code faster. 
+
+\subsection{Tuple patterns}
+As with simple parameters, pattern matching is possible also with tuples.
+
+\begin{lstlisting}[language=haskell]
+fst :: (a, b) -> a
+fst (x, _) = x
+
+snd :: (a, b) -> b
+snd (_, y) = y
+\end{lstlisting}
+
+\subsection{List patterns}
+Like tuples, patterns can be applied to lists too. The most common pattern that is used while defining functions that work on lists is the pattern that acts when the list is empty and represent thus the base case of a possible recursion. 
+
+\begin{lstlisting}[language=haskell]
+sum :: [Num] -> Num
+sum [ ] = 0
+sum (x:xs) = x + sum xs
+\end{lstlisting}
+
+Note that with \texttt{x:xs} we represent a list that has \textbf{at least one value}, as lists can be seen as one value concatenated with a (possible empty) list.
+
+
+\section{Lambda expression}
+Another way to define a function using Haskell is by using \textbf{lambda expression}.
+
+\begin{lstlisting}[language=haskell]
+add :: Int -> Int -> Int 
+add = \x -> (\y -> x + y)
+
+const :: a -> b -> a
+const x = \_ -> x
+\end{lstlisting}
+
+From the signature we can easily see that lambda expressions express naturally currified functions. 
+\linebreak \linebreak
+
+Lambdas are often used to create anonymous functions (functions with no name) that are used locally
+
+\begin{lstlisting}[language=haskell]
+map :: (a -> b) -> [a] -> [b]
+map _ [ ] = [ ]
+map f (x:xs) = f x : map f xs
+
+odds n :: Int -> [Int]
+odds n = map (\x -> (x * 2) + 1) [0..n-1]
+\end{lstlisting}

@@ -1,0 +1,146 @@
+\newpage
+\chapter{Monads}
+\section{Introduction}
+When we started off with functors, we saw that it's possible to map functions over various data types. We saw that for this this purpose, the \texttt{Functor} type class was introduces and it had us asking the question: when we have a function of type \texttt{a -> b} and some data type \texttt{f a}, how do we map that function over the data type to end up with \texttt{f -> b}? We was how to map something over a \texttt{Maybe a}, a list \texttt{[a]} and \texttt{IO a} etc. To answer this question of how to map a function over some data type, all we had to do was look at the type of \texttt{fmap}.
+
+\begin{lstlisting}[language=haskell]
+fmap :: (Functor f) => (a -> b) -> f a -> f b
+\end{lstlisting}
+
+And then make it work for our data type by writing the appropriate \texttt{Functor} instance.
+\linebreak \linebreak
+
+Then we saw a possible improvement of functors and said, hey, what if that function \texttt{a -> b} is already wrapped inside a functor value? Like, that if we have \texttt{Just (*3)}, how do we apply that to \texttt{Just 5}? What is we do not want to apply it to \texttt{Just 5} but to a \texttt{Nothing} instead? Or if we have \texttt{[(*2), (+4)]}, how do we apply that to \texttt{[1, 2, 3]}? How would that work even? For this, the \texttt{Applicative} type class was introduced, in which we wanted the answer to the following type.
+
+\begin{lstlisting}[language=haskell]
+(<*>) :: (Applicative f) => f (a -> b) -> f a -> f b
+\end{lstlisting}
+
+We also saw that we cant take a normal value and wrap it inside a data type. For instance, we can take a \texttt{1} and wrap it so that it becomes a \texttt{Just 1}, Or we can make it to a \texttt{[1]}. Or an I/O Action that does nothing just yields \texttt{1}. The function that does this is called \texttt{pure}.
+\linebreak \linebreak
+
+\textbf{Monads} are a natural extension of applicative functors and with them we're concerned with this: if you have a value with a context, \texttt{m a}, how do you apply to it a function that takes a normal \texttt{a} and returns a value with a context? That is, how do you apply a function of type \texttt{a -> m b} to a value of type \texttt{m a}? So, essentially, we will want the following function.
+
+\begin{lstlisting}[language=haskell]
+(>>=) :: (Monad m) => m a -> (a -> m b) -> m b
+\end{lstlisting}
+
+\textbf{If we have a fancy value and a function that takes a normal value but returns a fancy value, how do we feed that fancy value into the function?} This is the main question that we will concern ourselves when dealing with monads. We write \texttt{m a} instead of \texttt{f a} because the \texttt{m} stands for \texttt{Monad}, but monads are just applicative functions that support \texttt{>>=}. The \texttt{>>=} function is pronounced as \textit{bind}.
+\linebreak \linebreak
+
+Now that we have a vague idea of what monads are about, let's see if we can make that idea a bit less vague, considering the type \texttt{Maybe}.
+\linebreak \linebreak
+
+A value of type \texttt{Maybe a} represents a value of type \texttt{a} with the context of possible failure attached. A value \texttt{Just "dharma"} means that the string \texttt{"dharma"} is there whereas a value of \texttt{Nothing} represents its absence, or if you look at the string as the result of a computation, it means that the computation has failed. 
+\linebreak \linebreak
+
+Let's then think about how we would do \texttt{>>=} for \texttt{Maybe}. Like we said, \texttt{>>=} takes a monadic value and a function that takes a normal value and returns a monadic value, and manages to apply that function to the monadic value. How does it do that, if the function takes a normal value? Well, to do that it has to take into account the context of that monadic value. 
+\linebreak \linebreak
+
+In this case, \texttt{>>=} would take a \textbf{Maybe a} value and a function of type \texttt{a -> Maybe b} and somehow apply the function to the \texttt{Maybe a}. To figure out how it does that, we can use the intuition that we have from \texttt{Maybe} being an applicative functor. Let's say that we have a function \texttt{\\x -> Just (x + 1)}. It takes a number, adds \texttt{1} to it and wraps it in a \texttt{Just}.
+
+\begin{lstlisting}[language=haskell]
+Prelude> (\x -> Just(x + 1)) 1
+Just 2
+
+Prelude (\x -> Just(x + 1)) 100
+Just 101
+\end{lstlisting}
+
+If we feed \texttt{1} it evaluates to \texttt{Just 2}. If we give it the number \texttt{100} the results is \texttt{Just 101}. Now, how do we feed a \texttt{Maybe} value to this function? If we think about how \texttt{Maybe} acts as an applicative functor, answering this is pretty easy. If we feed it a \texttt{Just} value, take what's inside the \texttt{Just} and apply the function to it. If we give it a \texttt{Nothing}, then we're left with a function but \texttt{Nothing} to apply to it. In this case, let's just do what we did before and say the result is \texttt{Nothing}.
+\linebreak \linebreak
+
+Instead of calling it \texttt{>>=}, let's call it \texttt{applyMaybe} for now.
+
+\begin{lstlisting}[language=haskell]
+applyMaybe :: Maybe a -> (a -> Maybe b) -> Maybe b
+applyMaybe Nothing _ = Nothing
+applyMaybe (Just x) f = f x
+
+Prelude> Just 2 `applyMaybe` \x -> Just(x + 1)
+Just 4
+\end{lstlisting}
+
+So, it looks like that for \texttt{Maybe} we've figured out how to take a fancy value and feed to to a function that takes a normal values and returns a fancy one. 
+
+\section{The Monad type class}
+Just like functors have the \texttt{Functor} type class and applicative functors have the \texttt{Applicative} type class, monads come with their own type class: \texttt{Monad}.
+
+\begin{lstlisting}[language=haskell]
+class Monad m where
+  return :: a -> m a
+  
+  (>>=) :: m a -> (a -> m b) -> m b
+  
+  (>>) :: m a -> m b -> m b
+  x >> y = x >> \_ -> y
+  
+  fail :: String -> m a
+  fail msg = error msg 
+\end{lstlisting}
+
+Let's start with the first line. It says \texttt{class Monad m where}. But shouldn't it be something like \texttt{class (Applicative m) => Monad m where} so that a type has to be an applicative functor first before it can be made a monad? It really should, but when Haskell was born it hadn't occurred to people that applicative functors are a good fit for Haskell so they weren't in there. But rest assured, every monad is an applicative functor. 
+\linebreak \linebreak
+
+The first function that the \texttt{Monad} type class defines is \texttt{return}. It's the same as \texttt{pure}, only wit ha different name. It takes a value and puts it in a minimal default context that sill holds that value.
+\linebreak \linebreak
+
+The next function is \texttt{>>=}, or bind. It's like the function application, only instead of taking a normal value and feeding it to a normal function, it takes a monadic value and feeds it to a function that takes a normal value but returns a monadic value. 
+\linebreak \linebreak
+
+Next up, we have \texttt{>>=}. We won't pay too much attention to it for now because it comes with a default implementation and we pretty never implement it when making \texttt{Monad} instances.
+\linebreak \linebreak
+
+The final function of the \texttt{Monad} type class is \texttt{fail}. We never use it explicitly in our code. Instead, it's used by Haskell to enable failure in a special syntactic construct for monads. We don't need to concern ourselves with \texttt{fail} too much for now.
+
+
+\section{Examples}
+\subsection{Maybe}
+Now that we know that the \texttt{Monad} type class looks like, let's take a look at how \texttt{Maybe} is an instance of \texttt{Monad}.
+
+\begin{lstlisting}[language=haskell]
+instance Monad Maybe where
+  return x = Just x
+  Nothing >>= f = Nothing
+  Just x >>= f = f x
+  fail _ = Nothing
+\end{lstlisting}
+
+\texttt{return} is the same as \texttt{pure}. We do what we did in the \texttt{Applicative} type class and wrap it in a \texttt{Just}.
+\linebreak \linebreak
+
+The usefulness of the \texttt{>>=} function is that it lets you contact sequentially different operations, and propagates the error.
+
+\begin{lstlisting}[language=haskell]
+Prelude> Just 1 >>= Just 2 >>= Nothing >>= Just 3
+Nothing
+\end{lstlisting}
+
+Because of how \texttt{>>=} is define, the first \texttt{Nothing} value that is encountered will result in it being propagated, and so all the computation will result in \texttt{Nothing}.
+
+
+\section{The do notation}
+Monads in Haskell are so useful that they got their own special syntax called \texttt{do} notation. We've already encountered \texttt{do} notation when we were doing I/O and there we said it was used to glue together I/O actions into one.  The interesting thing is that the \texttt{do} notation can be used for every monadic type. Its principle is still the same: gluing together monadic values in sequence. 
+\linebreak \linebreak
+
+Consider the following script.
+
+\begin{lstlisting}[language=haskell]
+foo :: Maybe String
+foo = Just 3   >>= (\x ->
+      Just "!" >>= (\y -> 
+      Just (show x ++ y)))
+\end{lstlisting}
+
+The result of this script is \texttt{Just("3!")}, but we can clearly see that the syntax is pretty complex. We have to lambdas just to perform simple operations. \\
+With the \texttt{do} notation we can remove the lambdas to obtain a cleaner code.
+
+\begin{lstlisting}[language=haskell]
+foo :: Maybe String
+foo = do
+    x <- Just 3
+    y <- Just "!"
+    Just (show x ++ y)
+\end{lstlisting}
+
+In a \texttt{do} expression, every single line is a monadic value. To inspect its result, we use \texttt{<-}. If we have a \texttt{Maybe String} and we bind it with \texttt{<-} to a a variable, that variable will be a \texttt{String}, just like when we used \texttt{>>=} to feed monadic values to lambdas. The last monadic value in a \texttt{do} expression, like \texttt{Just(show x ++ x)} here, can't be used with \texttt{<-} to bind its result, because that wouldn't make sense if we translated the \texttt{do} expression back to a chain of \texttt{>>=} applications. Rather, its result is the result of the whole glued up monadic value, taking into account the possible failure of any of the previous ones (which is in fact passes from one to the next monadic value).

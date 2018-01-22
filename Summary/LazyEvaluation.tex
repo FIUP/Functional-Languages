@@ -1,0 +1,267 @@
+\newpage
+\chapter{Lazy evaluation}
+AS we've seen since now, inside Haskell the computation is the application of function to given arguments. As everything can be considered a function, there are cases where some functions can be evaluated in different ways.  \\
+Let's consider the following function.
+
+\begin{lstlisting}[language=haskell]
+int :: Int -> Int
+inc n = n + 1
+\end{lstlisting}
+
+It's application \texttt{int (2 * 3)} can be evaluated either in the following order
+
+\begin{lstlisting}[language=haskell]
+inc (2 * 3)
+= applying inc
+(2 * 3) + 1
+= applying *
+6 + 1
+= applying +
+= 7
+\end{lstlisting}
+
+or the following one
+
+\begin{lstlisting}[language=haskell]
+inc (2 * 3) 
+= applying *
+inc (6)
+= applying inc 
+6 + 1
+= applying +
+7
+\end{lstlisting}
+
+Fortunately, inside Haskell any two different ways of evaluating the same expression will always produce the same final value, provided that they both terminate. \\
+This is possible due to the \textbf{absence of side effects} inside functions characteristic of Haskell. Inside common imperative languages this is not possible. Let's consider the function \texttt{n + (n = 1)} and its following ways of evaluation with a starting value of \texttt{n = 0}.
+
+\begin{lstlisting}[language=haskell]
+n + (n = 1)
+= applying n
+0 + (n = 1)
+= applying =
+0 + 1
+= applying +
+1
+\end{lstlisting} 
+
+\begin{lstlisting}[language=haskell]
+n + (n = 1)
+= applying =
+n + (1)
+= applying n
+1 + 1
+= applying +
+2
+\end{lstlisting}
+
+As we can see the presence of side effects can lead to different results based on the evaluation strategies. 
+
+\section{Evaluation strategies}
+Before defining the different evaluation strategies that can be found inside Haskell, let's define a base concept. An expression that has the form of a function applied to one or more arguments is called a \textbf{reducible expression} (\textbf{redex}). \\
+For example, considering the following function definition
+
+\begin{lstlisting}[language=haskell]
+mult :: (Int, Int) -> Int
+mult (x, y) = x * y
+\end{lstlisting}
+
+then the expression \texttt{mult(1 + 2, 2 + 3)} contains three redexes. The first is \texttt{1 + 2}, which reduced will lead to \texttt{mult(3, 2 + 3)}. The second one is \texttt{2 + 3}, which would lead to \texttt{mult(1 + 2, 5)} and the third one is \texttt{mult(1 + 2, 2 + 3)} which would lead to \texttt{(1 + 2) * (2 + 3)}. \\
+Even if all of the three ways of reducing wouldn't produce a different value, it is important to determine which one of them should be reduced first, which one second and which one third. 
+
+\subsection{Innermost evaluation}
+The first evaluation strategy is called the \textbf{innermost evaluation}, and consist into picking the redex which does not contain other redexes. When there are more than one redexes that do not contain other redexes, than the evaluation order must be from the left to the right. 
+\linebreak \linebreak
+
+Using the example above, the evaluation path would then result into the following.
+
+\begin{lstlisting}[language=haskell]
+mult(1 + 2, 2 + 3)
+= applying the left-most +
+mult(3, 2 + 3)
+= applying the +
+mult(3, 5)
+= applying mult
+3 * 5
+= applying *
+15
+\end{lstlisting}
+
+It's important to note that while using the innermost evaluation, arguments are passed to functions \textbf{by value}. They are in fact completely computed before being passed inside the function body.
+
+\subsection{Outermost evaluation}
+Dual to the innermost evaluation it's the \textbf{outermost evaluation} strategy, inside which the redexes are computed starting from the ones that are not contained inside other redexes and from the left to the right.
+\linebreak \linebreak
+
+Following the \texttt{mult} example, we would obtain the following evaluation path. 
+
+\begin{lstlisting}[language=haskell]
+mult(1 + 2, 2 + 3)
+= applying mult
+(1 + 2) * (2 + 3)
+= applying the left +
+3 * (2 + 3)
+= applying +
+3 * 5
+= applying *
+15
+\end{lstlisting}
+
+Opposed to what happens inside the innermost evaluation strategy, while using the outermost evaluation arguments are passed to function bodies not evaluated. This particular strategy is called \textbf{by name}. 
+
+\section{Strict functions}
+If we look closer to the examples presented, we can see that some functions (such as \texttt{+} and \texttt{*}) require their arguments to be fully evaluated before being called, even during the outermost evaluation strategy. Such functions are called \textbf{strict} and cannot work without fully evaluated arguments.
+
+\section{Lambda expressions}
+Let's take a look at what happens when dealing with lambda expression. \\
+
+\begin{lstlisting}[language=haskell]
+mult :: Int -> Int -> Int
+mult x = \y -> x * y 
+\end{lstlisting}
+
+The first evaluation strategy we consider is the innermost evaluation.
+
+\begin{lstlisting}[language=haskell]
+mult(1 + 2, 2 +3)
+= applying left +
+mult(3, 2 + 3)
+= applying mult
+(\y -> 3 * y)(2 + 3)
+= applying +
+(\y -> 3 * y)(5)
+= applying lambda
+3 * 5
+= applying *
+15
+\end{lstlisting}
+
+As we can see, the arguments are passed \textbf{by value} one at the time. If we would use the outermost evaluation strategy we would have to remember that \textbf{the selection of redexed withing the body of a lambda expression is forbidden}. That said, we cannot reduce the body of a lambda, as their are see as black boxes. \\
+For example, the expression \texttt{(\\x -> 1 + 2)} is considered as fully evaluated, and we cannot manipulate the body \texttt{1 + 2} in order to reduce it deleting the lambda.
+
+\section{Termination}
+Now that we've seen the different evaluation strategies, let's see how they can yield to different results when taking into consideration the computation of non-terminating functions. 
+\linebreak \linebreak
+
+Let's consider the following functions
+
+\begin{lstlisting}[language=haskell]
+fst :: (Int, Int) -> Int
+fst (x, _) = x
+
+inf :: Int
+int = 1 + inf
+\end{lstlisting}
+
+and the expression
+
+\begin{lstlisting}[language=haskell]
+fst(0, inf)
+\end{lstlisting}
+
+It's easy to note that, if we would apply innermost evaluation, the computation would not terminate, because we would have to fully compute the \texttt{inf} function before passing its value to \texttt{fst}. But, as soon as we start to try to compute \texttt{inf}, this does not terminate due to an infinite recursion. \\
+Looking closer at the definition of \texttt{fst}, we notice that we should not compute \texttt{inf} at all, as \texttt{fst} itself doesn't even consider the value of the second value of the pair to return the first one. \\
+This observation is what makes outermost evaluation successful inside this example, as it lets execute \texttt{fst} first, which returns simply \texttt{0} and ends the computation. 
+\linebreak \linebreak
+
+The things that we saw explicitly inside this example can be expressed inside a theorem stating that \textbf{is there is any evaluation sequence that terminates for a given expression, then call by name evaluation will also terminate for that expression and with the same final result}. \\
+On the other side, we cannot state anything about call by value, as it may or may not terminate.
+
+\section{Number of reductions}
+Let's now consider the following function
+
+\begin{lstlisting}[language=haskell]
+square :: Int -> Int
+square n = n * n
+\end{lstlisting}
+
+Trying to evaluate \texttt{square(1 + 2)} using call by value will result in the following evaluation
+
+\begin{lstlisting}[language=haskell]
+square(1 + 2)
+= applying +
+square 3
+= applying square
+3 * 3
+= applying *
+9 
+\end{lstlisting}
+
+while using call by value would result into the following one
+
+\begin{lstlisting}[language=haskell]
+square(1 + 2)
+= applying square
+(1 + 2) * (1 + 2)
+= applying left +
+3 * (1 + 2)
+= applying +
+3 * 3
+= applying *
+9
+\end{lstlisting}
+
+As we can see, the call by name evaluation is longer than the call by value, just because the expression \texttt{1 + 2} is computed two times. \\
+This problem can be fixed by using \textbf{pointers} to indicate the sharing of an expression during the evaluation. Using pointers the compiler is able to evaluate the expression \texttt{1 + 2} only one time, and then replace its value where needed, cutting down one step of evaluation and making it as long as the call by value evaluation.
+\linebreak \linebreak
+
+The usage of call by name evaluation and memory pointers is what determines the ability of perform \textbf{lazy evaluation} inside Haskell. 
+\linebreak \linebreak
+
+Other than avoid the computation of same expressions twice or more times, lazy evaluation also permit the usage of infinite structures such as lists. \\
+Let's consider the following function. 
+
+\begin{lstlisting}[language=haskell]
+ones :: [Int]
+ones = 1 : ones
+\end{lstlisting}
+
+The computation of \texttt{ones} does not terminate due to its infinite recursion, but it also avoid the expression \texttt{head ones} to terminate too.
+
+\begin{lstlisting}[language=haskell]
+head ones
+= head (1 : ones)
+= head (1 : (1 : ones))
+= head (1 : (1 : (1 : ones)))
+...
+\end{lstlisting}
+
+However, using the lazy evaluation, we are able to solve this problem.
+
+\begin{lstlisting}[language=haskell]
+head ones
+= applying ones
+head 1:ones
+= applying head
+1
+\end{lstlisting}
+
+Due to the fact that lazy evaluation evaluates \texttt{ones} only as much as it is strictly necessary in order to produce the result, we are able to end the computation without falling for an infinite recursion. \\
+So, it is important to note that \textbf{with lazy evaluation expressions are only evaluated as much as required by the context in which they are used}. And this does not apply only to lists, but also to trees and other potentially-infinite data structures.
+
+\section{Creating strict functions}
+As seen above, Prelude includes a set of so-called \textit{stict functions}. These functions require one or more of their arguments to be fully evaluated before executing. But what if we want to define a stric function? How should be do it? \\
+Fortunately for us, Haskell provides the \texttt{\$!} function, which \textbf{forces the top-level evaluation of the argument to which is applied}. 
+This means that if the argument is a basic type (\texttt{Int, Bool}, etc) the evaluation stops when it reaches a constant. If it is a pair, then it stops as soon as it has shown that the argument as a value of type \texttt{(\_, \_)}. Finally, if it is a list then it stops as soon as the value is either \texttt{[]} or \texttt{(\_:\_)}.
+\linebreak \linebreak
+
+Let's consider the following function as an example.
+
+\begin{lstlisting}[language=haskell]
+square :: Int -> Int
+square x = x * x
+\end{lstlisting}
+
+And let's apply it using \texttt{\$!} to its parameter.
+
+\begin{lstlisting}[language=haskell]
+square $! (1 + 2)
+= applying +
+square $! (3)
+= applying $!, it stop because the argument is and Int and is a constant value
+square 3
+= applying square
+3 * 3
+= applying *
+9
+\end{lstlisting}

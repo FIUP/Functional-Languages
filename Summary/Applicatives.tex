@@ -1,0 +1,104 @@
+\newpage
+\chapter{Applicatives}
+\section{Introduction}
+As we've seen before, functions in Haskell are curried by default, which means that a functions that seems to take several parameters actually takes just one parameter and returns a function that takes the next parameter and so on. If a function is of type \texttt{a -> b -> c}, we usually say that it takes two parameters and returns a \texttt{c}, but actually if takes an \texttt{a} and returns a functions \texttt{b -> c}. That's why we can call a function as \texttt{f x y} or as \texttt{(f x) y}. This mechanism is what enables us to partially apply functions just by calling them with too few parameters, which results in functions that we can then pass on to other functions. 
+\linebreak \linebreak
+
+So far,when we were mapping functions over functors, we usually mapped functions that take only one parameter. But what happens when we map a function like \texttt{*}, which takes two parameters, over a functor? Let's take a couple of concrete examples of this. If we have \texttt{Just 3} and we do \texttt{fmap (*) (Just 3)}, what do we get? From the instance implementation of \texttt{Maybe} for \texttt{Functor}, we know that if it's a \texttt{Just \textit{something}} value, it will apply the function to the \texttt{\textit{something}} inside the \texttt{Just}. Therefore, doing \texttt{fmap (*) (Just 3)} results in \texttt{Just ((*) 3)}, which can also be written as \texttt{Just (* 3)}. So, we got a function wrapped inside \texttt{Just}!
+\linebreak \linebreak
+
+So, we see that by mapping "multi-parameter" functions over functors we get functors that contain functions inside them. But what can we do with them? Well for one, we can map functions that take there functions as parameters over them, because whatever is inside a functor will be given to the function that we're mapping over it as parameter. 
+
+\begin{lstlisting}[language=haskell]
+Prelude> let a = fmap (*) [1, 2, 3, 4]
+Prelude> :t a
+a :: [Integer -> Integer]
+Prelude> fmap (\f -> f 9) a
+[9, 18, 27, 36]
+\end{lstlisting}
+
+But what if we have a functor value of \texttt{Just (* 3)} and a functor value of \texttt{Just 5} and we want to take out the function from \texttt{Just (3 *)} and map it over \texttt{Just 5}? With normal functors, we're out of luck, because all they support it just mapping normal functions over existing functors. Even when we mapped \texttt{\\f -> f 9} over a functor that contained functions inside it, we were just mapping a normal function over it. But we can't map a functor that's inside a functor over another functor with what \texttt{fmap} offers us. We could pattern-match against the \texttt{Just} construct to get the function out of it and then map it over \texttt{Just 5}, but we're looking for a more general and abstract way of doing that which works across functors.
+\linebreak \linebreak
+
+This is were the \texttt{Applicative} type class comes in. It lies inside the \texttt{Control.Applicative} module inside Prelude and it defines two methods, \texttt{pure and <*>}. It doesn't provide a default implementation for any of them, so we have to define them both if we want something to be an applicative functor. The class is define like so.
+
+\begin{lstlisting}[language=haskell]
+class (Functor f) => Applicative f where
+  pure :: a -> f a
+  (<*>) :: f(a -> b) -> f a -> f b
+\end{lstlisting}
+
+This simple three line class definition tells us a lot! Let's start at the first line. It starts the definition of \texttt{Applicative} class and it also introduces a class constraint. It says that if we want to make a type constructor part of the \texttt{Applicative} type class, it has to be in \texttt{Functor} first. That's why if we know that if a type constructor is part of the \texttt{Applicative} type class, it's also in \texttt{Functor}, so we can use \texttt{fmap} on it.
+\linebreak \linebreak
+
+The first method it define is called \texttt{pure}. It's type declaration is \texttt{pure :: a -> f a}. \texttt{f} plays the role of out applicative functor instance here. Because Haskell has a very good type system and because everything a function can do is take some parameters and return some value, we can tell a lot from a type declaration and this is no exception. \texttt{pure} should take a value of any type and return an applicative functor with that value inside it. So, we take a value and we wrap it in an applicative functor that has that values as the result inside it. 
+\linebreak \linebreak
+
+A better way of thinking about \texttt{pure} would be to say that it takes a value and puts it in some sort of default (or  \textit{pure}) context - a minimal context that still yields that value. 
+\linebreak \linebreak
+
+The \texttt{<*>} function is really interesting. IT has a type declaration of \texttt{f (a -> b) -> f a -> f b}. It is very similar to \texttt{fmap :: (a -> b) -> f a -> f b}. It's a sort of a beefed up \texttt{fmap}. Whereas \texttt{fmap} takes a function and a functor and applies the function inside the functor, \texttt{<*>} takes a functor that has a function in it and another functor and sort of extracts that function from the first functor and then maps it over the second one. 
+\linebreak \linebreak
+
+\section{Examples}
+\subsection{Maybe}
+Let's take a loot at the \texttt{Applicative} instance implementation for \texttt{Maybe}.
+
+\begin{lstlisting}[language=haskell]
+instance Applicative Maybe where
+  pure = Just
+  Nothing <*> _ = Nothing
+  (Just f) <*> something = fmap f something
+\end{lstlisting}
+
+Again, from the class definition we see that \texttt{f} that plays the role of the applicative functor should take one concrete type as a parameter, si we write \texttt{instance Application Maybe where} instead of writing \texttt{instance Applicative (Maybe a) where}.
+\linebreak \linebreak
+
+First of,, \texttt{pure}. We said earlier that it's supposed to take something and wrap it in an applicative functor. We wrote \texttt{pure = Just}, because value constructors like \texttt{Just} are normal functions. We could have also written \texttt{pure x = Just x}.
+\linebreak \linebreak
+
+Next up, we have the definition for \texttt{<*>}. We can't extract a function out of a \texttt{Nothing}, because it has no function inside it. So we say that if we try to extract a function from a \texttt{Nothing}, the result is a \texttt{Nothing}. If you look at the class definition for \texttt{Applicative}, you'll see that there's a \texttt{Functor} class constraint, which means that we can assume that both \texttt{<*>}'s parameters are functors. If the first parameter is not a \texttt{Nothing}, but a \texttt{Just} with some function inside it, we say that we then want to map that function over the second parameter. This also takes care of the case where the second parameter is \texttt{Nothing}, because doing \texttt{fmap} with any function over a \texttt{Nothing} will return a \texttt{Nothing}.
+
+\begin{lstlisting}[language=haskell]
+Prelude> pure (+) <*> Just 3 <*> Just 5
+Just 8
+
+Prelude> pure (+) <*> Just 3 <*> Nothing
+Nothing
+
+Prelude> pure (+) Nothing <*> just 5
+Nothing
+\end{lstlisting}
+
+Note that \texttt{<*>} if left-associative, which means that \texttt{pure (+) <*> Just 3 <*> Just 5} is the same as \texttt{(pure (+) Just 3) <*> Just 5}.
+\linebreak \linebreak
+
+\subsection{Lists}
+One instance of \texttt{Applicative} is \texttt{[]}.
+
+\begin{lstlisting}[language=haskell]
+instance Applicative [] where
+  pure x = [x]
+  functions <*> values = [f x | f <- functions, x <- values]
+\end{lstlisting}
+
+So we can use this definition as follows in order to map a list of functions each one over every single value of a list of values.
+
+\begin{lstlisting}[language=haskell]
+Prelude> [(*0), (+100), (^2)] <*> [1, 2, 3]
+[0, 0, 0, 101, 102, 103, 1, 4, 9]
+\end{lstlisting}
+
+\subsection{IO}
+Another instance of \texttt{Applicative} that we've encountered is \texttt{IO}. This is how the instance is implemented.
+
+\begin{lstlisting}[language=haskell]
+instance Applicative IO where
+  pure = return
+  a <*> b = do
+    f <- a
+    x <- b
+    return (f x)
+\end{lstlisting}
+
+Since \texttt{pure} is all about putting a value in a minimal context that sill holds it as its result, it makes sense that \texttt{pure} is just \texttt{return}, because \texttt{return} does exactly that; it makes an I/O action that doesn't do anything, it just yields some value as its result, but it doesn't really do any I/O operations like printing to the terminal or reading from a file.
